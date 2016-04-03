@@ -1,0 +1,98 @@
+{% extends "template.html" %}
+
+{% block head %}
+	<script type="text/javascript">
+
+		function createAppliance() {
+			var name = document.getElementById("applianceName").value;
+			var category = document.getElementById("applianceCategory").value;
+			if (name && category) {
+				data = {
+					"name": name,
+					"category": category
+				}
+				var JSONdata = JSON.stringify(data)
+
+				$.post("/_ah/api/ems/v1/createAppliance", JSONdata, function(data){
+					document.getElementById("responseName").innerHTML = data["name"];
+					document.getElementById("responseCategory").innerHTML = data["category"];
+					document.getElementById("responseStringID").innerHTML = data["string_id"];
+				});
+			}
+			else {
+				console.log("Can't send empty input")
+			};
+		}
+
+		function getAllAppliance() {
+			data = {}
+			var JSONdata = JSON.stringify(data)
+			htmlTable = ""
+			$.post("/_ah/api/ems/v1/getAllAppliance", JSONdata, function(data){
+				console.log(data["items"]);
+				headers = ["name", "string_id", "category"]
+				$.each(data["items"], function(index, entry){
+					htmlTable += "<tr>"
+					for (head in headers){
+						htmlTable += "<td>" + entry[headers[head]] + "</td>"
+					}
+					htmlTable += "</tr>"
+				});
+				document.getElementById("applianceTable").innerHTML = htmlTable
+			});
+		}
+	</script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+	<h1>Appliance Tests</h1>
+
+	<hr>
+
+	<div class="row">
+		<h3>1. Create New Appliance</h3>
+		<div class="col-sm-6">
+			<div class="jumbotron">
+				<form>
+					<div class="form-group">
+						<label for="applianceName">Name</label>
+						<input class="form-control" id="applianceName" placeholder="eg : Panasonic Fridge">
+						<label for="applianceCategory">Category</label>
+						<input class="form-control" id="applianceCategory" placeholder="eg : Fridge">
+					</div>
+				</form>
+				<button onclick="createAppliance()" class="btn btn-default">Submit</button>
+			</div>
+		</div>
+
+		<div class="col-sm-6">
+			<h3>Database Response</h3>
+			<div class="jumbotron">
+				<div id="responseName">(Name)</div>
+				<div id="responseCategory">(Category)</div>
+				<div id="responseStringID">(ID)</div>
+			</div>
+		</div>
+	</div>
+
+	<hr>
+
+	<div class="row">
+		<h3>2. Get All Appliances in Database</h3>
+		<button onclick="getAllAppliance()" class="btn btn-primary">Refresh Table</button>
+		<table class="table table-responsive">
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>ID</th>
+					<th>Category</th>
+				</tr>
+			</thead>
+			<tbody id="applianceTable">
+			</tbody>
+		</table>
+		<script type="text/javascript">getAllAppliance();</script>
+	</div>
+</div>
+{% endblock %}

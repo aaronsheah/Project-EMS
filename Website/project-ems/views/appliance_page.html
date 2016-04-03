@@ -1,0 +1,168 @@
+{% extends "template.html" %}
+
+{% block head %}
+<script type="text/javascript">
+	function writePower() {
+		var real = parseFloat(document.getElementById("powerInput").value);
+		var appliance_id = (document.getElementById("appliance_id").value);
+		if (real && appliance_id) {
+			var data = {
+				"appliance_id": appliance_id,
+				"real" : real
+			}
+			var JSONdata = JSON.stringify(data)
+			$.post("/_ah/api/ems/v1/writePower", JSONdata, function(data){
+				// document.getElementById("responseDate").innerHTML = data["date"];
+				// document.getElementById("responseValue").innerHTML = data["real"];
+			});
+		}
+		else {
+			console.log("Can't send empty input")
+		};
+	}
+
+	function getNPower(input) {
+		var n = parseInt(input)
+		if (n) {
+			var data = {
+				"n" : n,
+				"appliance_id" : "{{ appliance.key.id() }}"
+			}
+			var JSONdata = JSON.stringify(data)
+			htmlTable = ""
+			$.post("/_ah/api/ems/v1/getNPower", JSONdata, function(data){
+				$.each(data["items"], function(index, entry){
+					htmlTable += "<tr>"
+					$.each(entry, function(key, value) {
+						htmlTable += "<td>" + value + "</td>"
+						// console.log(key + " : " + value);
+					});
+					htmlTable += "</tr>"
+				});
+				document.getElementById("powerTable").innerHTML = htmlTable
+			});
+		}
+	}
+
+	function generatePower() {
+		var days = parseFloat(document.getElementById("days").value);
+		var interval_length = parseInt(document.getElementById("interval_length").value);
+		var min_power = parseFloat(document.getElementById("min_power").value);
+		var max_power = parseFloat(document.getElementById("max_power").value);
+
+		// console.log(days, interval_length, min_power, max_power);
+
+		var n = days * 24 * 60/interval_length;
+		var today = new Date();
+		var start_day = new Date();
+
+		console.log(n, today, start_day);
+		
+		power_readings = [];
+		datetime_readings = [];
+		for (var i = 0; i < n; i++) {
+			tmp_power = Math.floor(Math.random() * (max_power - min_power + 1)) + min_power;
+			power_readings.push(tmp_power);
+			datetime_readings.push(start_day.getTime());
+			
+			console.log(tmp_power,start_day);
+			var data = {
+				"appliance_id": "{{ appliance.key.id() }}",
+				"real" : tmp_power,
+				"datetime" : start_day.getTime()
+			}
+			var JSONdata = JSON.stringify(data)
+			$.post("/_ah/api/ems/v1/writePower", JSONdata, function(data){});
+			start_day.setMinutes(start_day.getMinutes() - interval_length);
+		}
+		console.log(power_readings, datetime_readings);
+	}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+	<h1>{{ appliance.name }}</h1>
+
+	<div class="row">
+		<div class="col-sm-6">
+			<h2>Info</h2>
+			<form class="form-horizontal">
+				<div class="form-group">
+					<label for="name" class="col-sm-2 control-label">Name</label>
+					<div class="col-sm-10">
+						<p class="form-control-static" id="name">{{ appliance.name }}</p>
+					</div>
+				</div>
+				<div class="form-group">
+					<label for="category" class="col-sm-2 control-label">Category</label>
+					<div class="col-sm-10">
+						<p class="form-control-static" id="category">{{ appliance.category }}</p>
+					</div>
+				</div>
+			</form>
+			{{appliance}}
+		</div>
+		<div class="col-sm-6">
+			<h2>Send to Database (Single)</h2>
+			<div class="jumbotron">
+				<form>
+					<div class="form-group">
+						<label for="powerInput">Power Consumption</label>
+						<input class="form-control" id="powerInput" placeholder="Power (kW)">
+						<label for="appliance_id">Appliance ID</label>
+						<input class="form-control" id="appliance_id" disabled value="{{ appliance.key.id() }}">
+					</div>
+				</form>
+				<button onclick="writePower()" class="btn btn-default">Submit</button>
+			</div>
+		</div>
+	</div>
+
+	<h2>Send to Database (Multiple Values)</h2>
+	<div class="jumbotron">
+		<form>
+			<div class="form-group">
+				<div class="row">
+					<div class="col-xs-6">
+						<label for="min_power">Min Power Consumption</label>
+						<input class="form-control" id="min_power" placeholder="Power (kW)" value="1000">
+					</div>
+					<div class="col-xs-6">
+						<label for="max_power">Max Power Consumption</label>
+						<input class="form-control" id="max_power" placeholder="Power (kW)" value="10000">
+					</div>
+				</div>
+
+				<div class="row">
+					<div class="col-xs-6">
+						<label for="days">Duration (days)</label>
+						<input class="form-control" id="days" placeholder="" value="0.25">
+					</div>
+					<div class="col-xs-6">
+						<label for="interval_length">Interval Length (minutes)</label>
+						<input class="form-control" id="interval_length" placeholder="" value="60">
+					</div>
+				</div>
+			</div>
+		</form>
+		<button onclick="generatePower()" class="btn btn-default">Generate</button>
+	</div>
+
+	<h2>Pie Chart (Most Recently Used Times)</h2>
+	<h2>Chart</h2>
+	<h2>Table (5 Most Recent Values)</h2>
+	<table class="table table-responsive">
+		<thead>
+			<tr>
+				<th>Time</th>
+				<th>Real Power</th>
+			</tr>
+		</thead>
+		<tbody id="powerTable">
+		</tbody>
+		<script type="text/javascript">getNPower(5);</script>
+	</table>
+</div>
+
+{% endblock %}
