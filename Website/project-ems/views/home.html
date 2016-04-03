@@ -1,0 +1,130 @@
+{% extends "template.html" %}
+
+{% block head %}
+<!-- 3D Pie Chart -->
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script type="text/javascript">
+	/******************************************/
+	// RGB to HEX
+	function componentToHex(c) {
+		var hex = c.toString(16);
+		return hex.length == 1 ? "0" + hex : hex;
+	}
+	function rgbToHex(r, g, b) {
+		return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+	}
+	/******************************************/
+
+	/******************************************/
+	// 3D Pie Chart
+	google.charts.load("current", {packages:["corechart", "bar"]});
+	
+	google.charts.setOnLoadCallback(draw3DPie);
+	function draw3DPie() {
+		var data = google.visualization.arrayToDataTable([
+			['Task', 'Hours per Day'],
+			['Work',     11],
+			['Eat',      2],
+			['Commute',  2],
+			['Watch TV', 2],
+			['Sleep',    7]
+		]);
+
+		var options = {
+		// title: 'My Daily Activities',
+			is3D: true,
+		};
+
+		var pie_chart = new google.visualization.PieChart(document.getElementById('piechart_3d'));
+		pie_chart.draw(data, options);
+	}
+	/******************************************/
+	
+	/******************************************/
+	// Line Chart
+	google.charts.setOnLoadCallback(drawMultSeries);
+	function drawMultSeries() {
+		var max_pc = 0;
+		var power_consumption = {{ powerReadings }};
+		for (var i = 0; i < power_consumption.length; i++) {
+			if (power_consumption[i] >= max_pc) {
+				max_pc = power_consumption[i];
+			}
+		}
+
+		var green = [0, 255, 0];
+		var yellow = [255, 255, 0];
+		var red = [255, 0, 0];
+
+		var table = [
+			['Hours Ago', 'Energy Consumed (kWh)', { role: 'style' }]
+		];
+
+		for (var i = 0; i < 24; i++) {
+			var pixel_intensity = power_consumption[i] / max_pc;
+			var r_pixel = Math.min(255, Math.floor(500*pixel_intensity));
+			var g_pixel = 500 - Math.max(255, Math.floor(500*pixel_intensity));
+			var hex = 'color: ' + rgbToHex(r_pixel, g_pixel, 0);
+			console.log(pixel_intensity*100, r_pixel, g_pixel);
+
+			table.push(
+				[i+1, power_consumption[i], hex]
+			);
+		}
+		console.log(table);
+		var data = google.visualization.arrayToDataTable(table);
+
+		var options = {
+			chart: {
+				title: '24 Hours Total Consumption',
+				// subtitle: 'Sales, Expenses, and Profit: 2014-2017',
+			},
+			hAxis: {
+				min: 0,
+				max: 24
+			},
+			legend: { position: "none" },
+		};
+
+		var chart = new google.visualization.ColumnChart(document.getElementById('column_chart'));
+
+		chart.draw(data, options);
+	}
+	/******************************************/
+</script>
+{% endblock %}
+
+{% block content %}
+<div id="summary_bar" class="row">
+	<div class="col-xs-2">
+		<div class="dropdown" style="text-align: right">
+			<button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+				24 Hours
+				<span class="caret"></span>
+			</button>
+			<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+				<li><a href="#">7 Days</a></li>
+				<li><a href="#">1 Month</a></li>
+				<li><a href="#">1 Year</a></li>
+				<li><a href="#">All Time</a></li>
+			</ul>
+		</div>
+	</div>
+	<div class="col-xs-8">
+		<div id="summaryBar" style="border: 1px solid black; border-radius: 5px; padding: 10px;" class="row">
+			<div class="col-xs-4">Summary</div>
+			<div class="col-xs-4" style="text-align: center;">
+				{{ power_consumption }} kWh
+			</div>
+			<div class="col-xs-4" style="text-align: right;">
+				£{{ cost }}
+			</div>
+		</div>
+	</div>
+	<div class="col-xs-2"></div>
+</div>
+
+<div id="column_chart" style="width: 100%; height: 700px;"></div>
+<div id="piechart_3d" style="width: 100%; height: 700px;"></div>
+{% endblock %}
