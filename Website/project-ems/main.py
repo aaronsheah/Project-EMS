@@ -21,31 +21,53 @@ class MainHandler(webapp2.RequestHandler):
     def get(self):
         template = JINJA_ENVIRONMENT.get_template('home.html')
 
-        ######################################################
+        ############### 24 Hour Total Consumption ###############
         now = datetime.datetime.now()
         period = now-timedelta(days=1)
 
-        qry = Power.query(Power.added >= period).order(-Power.added)
+        powerQry = Power.query(Power.added >= period).order(-Power.added)
         
-        powerReadings = [0 for i in range(24)]
-        for power in qry:
+        totalPowerReadings = [0 for i in range(24)]
+        readingCounter = [0 for i in range(24)]
+
+        for power in powerQry:
             time_difference = ((now - power.added).seconds)/60/60
-            powerReadings[time_difference] += power.real
+            totalPowerReadings[time_difference] += power.real
+            readingCounter[time_difference] += 1
 
         power_consumption = 0
-        for power in powerReadings:
+        print totalPowerReadings
+        for index, power in enumerate(totalPowerReadings):
+            if power > 0:
+                totalPowerReadings[index] /= readingCounter[index]
             power_consumption = power_consumption + power/1000
+        print totalPowerReadings
+        cost = "%.2f" % (power_consumption * 0.12360) # Last 30 Days Money Spent (https://www.eonenergy.com/~/media/PDFs/About-Us/price-matrix/v4s/EOn%20Fixed%201%20Year%20%20v4%202013%2007%2015.pdf)
 
-        # Last 30 Days Money Spent (https://www.eonenergy.com/~/media/PDFs/About-Us/price-matrix/v4s/EOn%20Fixed%201%20Year%20%20v4%202013%2007%2015.pdf)
-        cost = "%.2f" % (power_consumption * 0.12360)
+        ######################################################
+        applianceQry = Appliance.query().order(Appliance.name)
+        applianceName = []
+        appliancePowerReadings = []
+        for appliance in applianceQry:
+            tmpPowerQry = Power.query(Power.appliance == appliance.key, Power.added >= period).order(-Power.added)
+            
+            applianceName.append(appliance.name)
+            
+            tmpAppliancePowerReadings = 0
+            for power in tmpPowerQry:
+                tmpAppliancePowerReadings += power.real
+
+            appliancePowerReadings.append(tmpAppliancePowerReadings)
 
         ######################################################
 
         params = {
             'home' : 1,
-            'power_consumption' : power_consumption,
+            'power_consumption' : "%.2f" % (power_consumption),
             'cost' : cost,
-            'powerReadings' : powerReadings
+            'powerReadings' : totalPowerReadings,
+            'applianceName' : applianceName,
+            'appliancePowerReadings' : appliancePowerReadings
         }
 
         self.response.write(template.render(params))
